@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Timeline App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --timeline-bg: #1f2937;
+            --timeline-fill: #3b3a3a;
+            --text-main: #e6eef8;
+            --text-muted: #9aa4b2;
+        }
+
+        body { background-color: #0b1220; color: var(--text-main); }
+
+        .timeline-container {
+            background: #071226;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+            margin-bottom: 30px;
+        }
+
+        .timeline-track {
+            height: 10px;
+            background-color: var(--timeline-bg);
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timeline-progress {
+            height: 100%;
+            background-color: var(--timeline-fill);
+            width: 0%;
+            transition: width 1s ease-in-out;
+            box-shadow: 0 0 18px rgba(59,58,58,0.45);
+        }
+
+        .event-card {
+            transition: transform 0.2s;
+            border-left: 5px solid var(--timeline-fill);
+            background: #071226;
+            color: #e6eef8;
+        }
+        .event-card.past { border-left-color: #6c757d; opacity: 0.9; }
+        .event-card:hover { transform: translateX(5px); }
+        
+        .nav-pills .nav-link.active {
+            background-color: var(--timeline-fill);
+            color: var(--text-main);
+        }
+        .task-badge { margin-right: 6px; margin-bottom: 6px; }
+        .task-form { margin-top: 8px; }
+        .task-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 10px;
+            overflow: hidden;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+            border: 1px solid rgba(255,255,255,0.04);
+            background: #0f1724;
+            color: var(--text-main);
+        }
+        .task-badge .task-title {
+            padding: 0.28rem 0.6rem;
+            background: transparent;
+            color: #e6eef8;
+        }
+        .task-badge .task-status {
+            padding: 0.28rem 0.6rem;
+            border-left: 1px solid rgba(255,255,255,0.04);
+            color: #fff;
+            font-size: 0.8rem;
+            text-transform: lowercase;
+        }
+        .task-status-todo { background: linear-gradient(90deg,#495057,#343a40); }
+        .task-status-doing { background: linear-gradient(90deg,#ffb020,#ff8a00); }
+        .task-status-done { background: linear-gradient(90deg,#16a34a,#0f8a4a); }
+        .card.event-card { background: #071226; border: none; }
+        .card-title { color: var(--text-main); }
+        .card-text.text-muted.small { color: var(--text-muted); }
+        .d-flex .text-secondary { color: var(--text-muted); }
+
+        .text-muted { color: var(--text-muted) !important; }
+        .text-dark { color: var(--text-main) !important; }
+
+        .badge.bg-primary { background-color: var(--timeline-fill) !important; color: var(--text-main) !important; }
+        .badge.bg-secondary { background-color: rgba(255,255,255,0.06) !important; color: var(--text-muted) !important; }
+        @media (max-width: 480px) {
+            .task-badge { font-size: 0.78rem; }
+            .task-badge .task-title { padding: 0.18rem 0.45rem; }
+            .task-badge .task-status { padding: 0.18rem 0.45rem; }
+        }
+    </style>
+</head>
+<body class="py-5">
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            <div class="timeline-container text-center">
+                <h5 id="next-event-title" class="mb-3 text-muted">Загрузка следующего события...</h5>
+                <div class="timeline-track mb-2">
+                    <div id="timeline-bar" class="timeline-progress"></div>
+                </div>
+                <div class="d-flex justify-content-between small text-secondary">
+                    <span id="start-time">-</span>
+                    <span id="end-time">-</span>
+                </div>
+                <div id="countdown" class="h5 mt-2 mb-0">-</div>
+                </div>
+
+                <ul class="nav nav-pills mb-4 justify-content-center" id="eventTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="pill" onclick="renderEvents('future')">Будущие</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="pill" onclick="renderEvents('past')">Прошедшие</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="pill" onclick="renderEvents('all')">Все</button>
+                </li>
+            </ul>
+
+            <div id="events-list">
+                </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    let events = [];
+    let tasks = [];
+    let currentFilter = 'future';
+    const NO_EVENT_PROGRESS_WINDOW_DAYS = 30;
+
+    function parseEventDate(dateVal) {
+        if (dateVal === null || typeof dateVal === 'undefined') return null;
+        if (typeof dateVal === 'number') {
+            const d = new Date(dateVal * 1000);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        if (typeof dateVal === 'string' && /^\d+$/.test(dateVal)) {
+            const n = parseInt(dateVal, 10);
+            const d = new Date(n * 1000);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        const d = new Date(dateVal);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    async function loadEvents() {
+        try {
+            const res = await fetch('events.json');
+            if (!res.ok) throw new Error('Failed to load events.json: ' + res.status);
+            const txt = await res.text();
+            const cleaned = txt.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
+            events = JSON.parse(cleaned);
+            events = events.filter(e => e && (typeof e.id !== 'undefined') && e.title);
+        } catch (err) {
+            console.error(err);
+            events = [];
+            const listContainer = document.getElementById('events-list');
+            listContainer.innerHTML = `<div class="text-center text-muted">Не удалось загрузить события</div>`;
+        }
+    }
+
+    async function loadTasks() {
+        try {
+            const res = await fetch('tasks.json');
+            if (!res.ok) throw new Error('Failed to load tasks.json: ' + res.status);
+            const txt = await res.text();
+            const cleaned = txt.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
+            tasks = JSON.parse(cleaned);
+            tasks = tasks.filter(t => t && (typeof t.eventId !== 'undefined') && t.title);
+        } catch (err) {
+            console.warn('No tasks.json or failed to load — starting with empty tasks', err);
+            tasks = [];
+        }
+    }
+
+    function renderTasksForEvent(eventId) {
+        const t = tasks.filter(x => x.eventId === eventId);
+        if (t.length === 0) return '';
+        return t.map(task => {
+            const status = String(task.status || 'todo').toLowerCase();
+            const safeTitle = escapeHtml(task.title || '');
+            const labels = { todo: 'TODO', doing: 'Выполняется', done: 'Выполнено' };
+            const displayLabel = labels[status] || status;
+            const safeDisplay = escapeHtml(displayLabel);
+            return `
+                <span class="task-badge">
+                    <span class="task-title">${safeTitle}</span>
+                    <span class="task-status task-status-${escapeHtml(status)}">${safeDisplay}</span>
+                </span>
+            `;
+        }).join('');
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function updateTimeline() {
+        const now = new Date();
+        const futureEvents = events
+            .filter(e => {
+                const d = parseEventDate(e.date);
+                return d === null || d > now;
+            })
+            .sort((a, b) => {
+                const da = parseEventDate(a.date);
+                const db = parseEventDate(b.date);
+                if (da === null && db === null) return 0;
+                if (da === null) return 1;
+                if (db === null) return -1;
+                return da - db;
+            });
+
+        if (futureEvents.length > 0) {
+            const nextEvent = futureEvents[0];
+            const nextDate = parseEventDate(nextEvent.date);
+            if (nextDate) {
+                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const totalDuration = nextDate - startOfDay;
+                const elapsed = now - startOfDay;
+                let progress = (elapsed / totalDuration) * 100;
+                progress = Math.max(0, Math.min(100, progress));
+                document.getElementById('timeline-bar').style.width = progress + "%";
+                document.getElementById('next-event-title').innerText = `До события "${nextEvent.title}" осталось...`;
+                document.getElementById('start-time').innerText = "Сегодня";
+                document.getElementById('end-time').innerText = nextDate.toLocaleDateString();
+                const remainingMs = nextDate - now;
+                document.getElementById('countdown').innerText = formatDuration(remainingMs);
+            } else {
+                document.getElementById('timeline-bar').style.width = "0%";
+                document.getElementById('next-event-title').innerText = `Следующее событие: "${nextEvent.title}" (TBA)`;
+                document.getElementById('start-time').innerText = "-";
+                document.getElementById('end-time').innerText = "TBA";
+                document.getElementById('countdown').innerText = "Дата будет объявлена";
+            }
+        } else {
+            const pastEvents = events
+                .filter(e => parseEventDate(e.date) !== null && parseEventDate(e.date) <= now)
+                .sort((a, b) => parseEventDate(b.date) - parseEventDate(a.date));
+            if (pastEvents.length > 0) {
+                const last = pastEvents[0];
+                const lastDate = parseEventDate(last.date);
+                const elapsed = now - lastDate;
+                const windowMs = NO_EVENT_PROGRESS_WINDOW_DAYS * 24 * 3600 * 1000;
+                const progress = Math.max(0, Math.min(100, (elapsed / windowMs) * 100));
+                document.getElementById('timeline-bar').style.width = progress + "%";
+                document.getElementById('next-event-title').innerText = `С момента события "${last.title}" прошло...`;
+                document.getElementById('start-time').innerText = lastDate.toLocaleDateString();
+                document.getElementById('end-time').innerText = 'сейчас';
+                document.getElementById('countdown').innerText = formatDuration(elapsed);
+            } else {
+                document.getElementById('next-event-title').innerText = "Событий нет";
+                document.getElementById('timeline-bar').style.width = "0%";
+                document.getElementById('start-time').innerText = "-";
+                document.getElementById('end-time').innerText = "-";
+                document.getElementById('countdown').innerText = "";
+            }
+        }
+    }
+
+    function formatDuration(ms) {
+        if (ms <= 0) return '0с';
+        const totalSec = Math.floor(ms / 1000);
+        const days = Math.floor(totalSec / 86400);
+        const hours = Math.floor((totalSec % 86400) / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
+        const parts = [];
+        if (days) parts.push(days + 'д');
+        if (hours) parts.push(hours + 'ч');
+        if (minutes) parts.push(minutes + 'м');
+        parts.push(seconds + 'с');
+        return parts.join(' ');
+    }
+
+    function renderEvents(type) {
+        currentFilter = type;
+        const listContainer = document.getElementById('events-list');
+        const now = new Date();
+        listContainer.innerHTML = '';
+
+        let filtered = [];
+        if (type === 'future') {
+            filtered = events.filter(e => {
+                const d = parseEventDate(e.date);
+                return d === null || d >= now;
+            });
+        } else if (type === 'past') {
+            filtered = events.filter(e => {
+                const d = parseEventDate(e.date);
+                return d !== null && d < now;
+            });
+        } else {
+            filtered = events.slice();
+        }
+
+        filtered = filtered.sort((a, b) => {
+            const da = parseEventDate(a.date);
+            const db = parseEventDate(b.date);
+            if (da === null && db === null) return 0;
+            if (da === null) return 1;
+            if (db === null) return -1;
+            return da - db;
+        });
+
+        if (filtered.length === 0) {
+            listContainer.innerHTML = `<div class="text-center text-muted">Список пуст</div>`;
+            return;
+        }
+
+        filtered.forEach(event => {
+            const parsed = parseEventDate(event.date);
+            const dateStr = parsed
+                ? parsed.toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+                : 'TBA';
+            const isPast = parsed ? (parsed < now) : false;
+            const badgeClass = parsed ? (isPast ? 'bg-secondary' : 'bg-primary') : 'bg-secondary';
+            const card = `
+                <div class="card event-card mb-3 shadow-sm ${isPast ? 'past' : ''}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-1">${event.title}</h5>
+                            <span class="badge ${badgeClass}">${dateStr}</span>
+                        </div>
+                        <p class="card-text text-muted small">${event.desc}</p>
+                        <div class="mt-2" id="tasks-for-${event.id}">${renderTasksForEvent(event.id)}</div>
+                    </div>
+                </div>
+            `;
+            listContainer.innerHTML += card;
+        });
+        initTooltips();
+    }
+
+    function initTooltips() {
+        try {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.forEach(function (el) {
+                if (!el._tooltip) el._tooltip = new bootstrap.Tooltip(el);
+            });
+        } catch (e) {
+            console.warn('Tooltip init failed', e);
+        }
+    }
+
+    (async function init() {
+        await loadEvents();
+        await loadTasks();
+        updateTimeline();
+        renderEvents('future');
+        setInterval(updateTimeline, 1000);
+    })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
