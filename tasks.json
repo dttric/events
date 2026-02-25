@@ -13,6 +13,12 @@
         "id": "t1",
         "eventId": 2,
         "title": "Написать реферат по физре",
-        "status": "doing"
+        "status": "done"
+    },
+    {
+        "id": "t2",
+        "eventId": 2,
+        "title": "Сдать реферат по физре",
+        "status": "todo"
     }
 ]
