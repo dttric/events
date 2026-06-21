@@ -194,9 +194,9 @@
         const t = tasks.filter(x => x.eventId === eventId);
         if (t.length === 0) return '';
         return t.map(task => {
-            const status = String(task.status || 'todo').toLowerCase();
+            const status = String(task.status || '?');
             const safeTitle = escapeHtml(task.title || '');
-            const labels = { todo: 'TODO', doing: 'Выполняется', done: 'Выполнено' };
+            const labels = { todo: 'В процессе', doing: 'Выполняется', done: 'Выполнено' };
             const displayLabel = labels[status] || status;
             const safeDisplay = escapeHtml(displayLabel);
             return `
