@@ -19,7 +19,13 @@
         "id": "t2",
         "eventId": 2,
         "title": "Сдать реферат по физре",
-        "status": "todo"
+        "status": "done"
+    },
+    {
+        "id": "t7",
+        "eventId": 2,
+        "title": "Закрыть физру",
+        "status": "done"
     },
     {
         "id": "t3",
@@ -30,7 +36,7 @@
     {
         "id": "t4",
         "eventId": 5,
-        "title": "Дождаться крупного обнолвения в Dota 2",
+        "title": "Дождаться крупного обновления в Dota 2",
         "status": "todo"
     },
     {
