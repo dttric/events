@@ -135,6 +135,7 @@
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script>
     let events = [];
     let tasks = [];
@@ -156,34 +157,37 @@
         return isNaN(d.getTime()) ? null : d;
     }
 
-    async function loadEvents() {
-        try {
-            const res = await fetch('events.json');
-            if (!res.ok) throw new Error('Failed to load events.json: ' + res.status);
-            const txt = await res.text();
-            const cleaned = txt.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
-            events = JSON.parse(cleaned);
-            events = events.filter(e => e && (typeof e.id !== 'undefined') && e.title);
-        } catch (err) {
-            console.error(err);
+    function loadEvents() {
+        return $.ajax({ url: 'events.json', dataType: 'text' }).then(function (txt) {
+            try {
+                const cleaned = txt.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
+                events = JSON.parse(cleaned);
+                events = events.filter(e => e && (typeof e.id !== 'undefined') && e.title);
+            } catch (err) {
+                console.error(err);
+                events = [];
+                $('#events-list').html('<div class="text-center text-muted">Не удалось загрузить события</div>');
+            }
+        }).fail(function (jqXHR, status, err) {
+            console.error('Failed to load events.json', status, err);
             events = [];
-            const listContainer = document.getElementById('events-list');
-            listContainer.innerHTML = `<div class="text-center text-muted">Не удалось загрузить события</div>`;
-        }
+            $('#events-list').html('<div class="text-center text-muted">Не удалось загрузить события</div>');
+        });
     }
 
-    async function loadTasks() {
-        try {
-            const res = await fetch('tasks.json');
-            if (!res.ok) throw new Error('Failed to load tasks.json: ' + res.status);
-            const txt = await res.text();
-            const cleaned = txt.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
-            tasks = JSON.parse(cleaned);
-            tasks = tasks.filter(t => t && (typeof t.eventId !== 'undefined') && t.title);
-        } catch (err) {
-            console.warn('No tasks.json or failed to load — starting with empty tasks', err);
+    function loadTasks() {
+        return $.ajax({ url: 'tasks.json', dataType: 'text' }).then(function (txt) {
+            try {
+                const cleaned = txt.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
+                tasks = JSON.parse(cleaned);
+                tasks = tasks.filter(t => t && (typeof t.eventId !== 'undefined') && t.title);
+            } catch (err) {
+                console.warn('No tasks.json or failed to parse — starting with empty tasks', err);
+                tasks = [];
+            }
+        }).fail(function () {
             tasks = [];
-        }
+        });
     }
 
     function renderTasksForEvent(eventId) {
@@ -205,7 +209,7 @@
     }
 
     function escapeHtml(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     function updateTimeline() {
@@ -233,18 +237,18 @@
                 const elapsed = now - startOfDay;
                 let progress = (elapsed / totalDuration) * 100;
                 progress = Math.max(0, Math.min(100, progress));
-                document.getElementById('timeline-bar').style.width = progress + "%";
-                document.getElementById('next-event-title').innerText = `До события "${nextEvent.title}" осталось...`;
-                document.getElementById('start-time').innerText = "Сегодня";
-                document.getElementById('end-time').innerText = nextDate.toLocaleDateString();
+                $('#timeline-bar').css('width', progress + '%');
+                $('#next-event-title').text(`До события "${nextEvent.title}" осталось...`);
+                $('#start-time').text('Сегодня');
+                $('#end-time').text(nextDate.toLocaleDateString());
                 const remainingMs = nextDate - now;
-                document.getElementById('countdown').innerText = formatDuration(remainingMs);
+                $('#countdown').text(formatDuration(remainingMs));
             } else {
-                document.getElementById('timeline-bar').style.width = "0%";
-                document.getElementById('next-event-title').innerText = `Следующее событие: "${nextEvent.title}" (TBA)`;
-                document.getElementById('start-time').innerText = "-";
-                document.getElementById('end-time').innerText = "TBA";
-                document.getElementById('countdown').innerText = "Дата будет объявлена";
+                $('#timeline-bar').css('width', '0%');
+                $('#next-event-title').text(`Следующее событие: "${nextEvent.title}" (TBA)`);
+                $('#start-time').text('-');
+                $('#end-time').text('TBA');
+                $('#countdown').text('Дата будет объявлена');
             }
         } else {
             const pastEvents = events
@@ -256,17 +260,17 @@
                 const elapsed = now - lastDate;
                 const windowMs = NO_EVENT_PROGRESS_WINDOW_DAYS * 24 * 3600 * 1000;
                 const progress = Math.max(0, Math.min(100, (elapsed / windowMs) * 100));
-                document.getElementById('timeline-bar').style.width = progress + "%";
-                document.getElementById('next-event-title').innerText = `С момента события "${last.title}" прошло...`;
-                document.getElementById('start-time').innerText = lastDate.toLocaleDateString();
-                document.getElementById('end-time').innerText = 'сейчас';
-                document.getElementById('countdown').innerText = formatDuration(elapsed);
+                $('#timeline-bar').css('width', progress + '%');
+                $('#next-event-title').text(`С момента события "${last.title}" прошло...`);
+                $('#start-time').text(lastDate.toLocaleDateString());
+                $('#end-time').text('сейчас');
+                $('#countdown').text(formatDuration(elapsed));
             } else {
-                document.getElementById('next-event-title').innerText = "Событий нет";
-                document.getElementById('timeline-bar').style.width = "0%";
-                document.getElementById('start-time').innerText = "-";
-                document.getElementById('end-time').innerText = "-";
-                document.getElementById('countdown').innerText = "";
+                $('#next-event-title').text('Событий нет');
+                $('#timeline-bar').css('width', '0%');
+                $('#start-time').text('-');
+                $('#end-time').text('-');
+                $('#countdown').text('');
             }
         }
     }
@@ -288,9 +292,9 @@
 
     function renderEvents(type) {
         currentFilter = type;
-        const listContainer = document.getElementById('events-list');
+        const $listContainer = $('#events-list');
         const now = new Date();
-        listContainer.innerHTML = '';
+        $listContainer.empty();
 
         let filtered = [];
         if (type === 'future') {
@@ -317,52 +321,51 @@
         });
 
         if (filtered.length === 0) {
-            listContainer.innerHTML = `<div class="text-center text-muted">Список пуст</div>`;
+            $listContainer.html('<div class="text-center text-muted">Список пуст</div>');
             return;
         }
 
         filtered.forEach(event => {
             const parsed = parseEventDate(event.date);
             const dateStr = parsed
-                ? parsed.toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+                ? parsed.toLocaleString('ru-RU', { year: 'numeric', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
                 : 'TBA';
             const isPast = parsed ? (parsed < now) : false;
             const badgeClass = parsed ? (isPast ? 'bg-secondary' : 'bg-primary') : 'bg-secondary';
-            const card = `
-                <div class="card event-card mb-3 shadow-sm ${isPast ? 'past' : ''}">
+            const $card = $(
+                `<div class="card event-card mb-3 shadow-sm ${isPast ? 'past' : ''}">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-1">${event.title}</h5>
+                            <h5 class="card-title mb-1">${escapeHtml(event.title)}</h5>
                             <span class="badge ${badgeClass}">${dateStr}</span>
                         </div>
-                        <p class="card-text text-muted small">${event.desc}</p>
+                        <p class="card-text text-muted small">${escapeHtml(event.desc || '')}</p>
                         <div class="mt-2" id="tasks-for-${event.id}">${renderTasksForEvent(event.id)}</div>
                     </div>
-                </div>
-            `;
-            listContainer.innerHTML += card;
+                </div>`
+            );
+            $listContainer.append($card);
         });
         initTooltips();
     }
 
     function initTooltips() {
         try {
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach(function (el) {
-                if (!el._tooltip) el._tooltip = new bootstrap.Tooltip(el);
+            $('[data-bs-toggle="tooltip"]').each(function () {
+                if (!this._tooltip) this._tooltip = new bootstrap.Tooltip(this);
             });
         } catch (e) {
             console.warn('Tooltip init failed', e);
         }
     }
 
-    (async function init() {
-        await loadEvents();
-        await loadTasks();
-        updateTimeline();
-        renderEvents('future');
-        setInterval(updateTimeline, 1000);
-    })();
+    $(function () {
+        $.when(loadEvents(), loadTasks()).always(function () {
+            updateTimeline();
+            renderEvents('future');
+            setInterval(updateTimeline, 1000);
+        });
+    });
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
