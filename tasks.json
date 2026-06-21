@@ -26,5 +26,23 @@
         "eventId": 6,
         "title": "Не допуститься до экзамена",
         "status": "done"
+    },
+    {
+        "id": "t4",
+        "eventId": 5,
+        "title": "Дождаться крупного обнолвения в Dota 2",
+        "status": "todo"
+    },
+    {
+        "id": "t5",
+        "eventId": 5,
+        "title": "Дождаться Локка в LoL",
+        "status": "todo"
+    },
+    {
+        "id": "t6",
+        "eventId": 5,
+        "title": "Дождаться 5 главу Deltarune",
+        "status": "todo"
     }
 ]
