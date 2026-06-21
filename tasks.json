@@ -20,5 +20,11 @@
         "eventId": 2,
         "title": "Сдать реферат по физре",
         "status": "todo"
+    },
+    {
+        "id": "t3",
+        "eventId": 6,
+        "title": "Не допуститься до экзамена",
+        "status": "done"
     }
 ]
