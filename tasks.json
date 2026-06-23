@@ -8,47 +8,4 @@
 //     status (string)           — todo | doing | done
 // Пример: { "id": "t1", "eventId": 1, "title": "Прогнать тесты", "status": "todo" }
 
-[
-    {
-        "id": "t1",
-        "eventId": 2,
-        "title": "Написать реферат по физре",
-        "status": "done"
-    },
-    {
-        "id": "t2",
-        "eventId": 2,
-        "title": "Сдать реферат по физре",
-        "status": "done"
-    },
-    {
-        "id": "t7",
-        "eventId": 2,
-        "title": "Закрыть физру",
-        "status": "done"
-    },
-    {
-        "id": "t3",
-        "eventId": 6,
-        "title": "Не допуститься до экзамена",
-        "status": "done"
-    },
-    {
-        "id": "t4",
-        "eventId": 5,
-        "title": "Дождаться крупного обновления в Dota 2",
-        "status": "todo"
-    },
-    {
-        "id": "t5",
-        "eventId": 5,
-        "title": "Дождаться Локка в LoL",
-        "status": "todo"
-    },
-    {
-        "id": "t6",
-        "eventId": 5,
-        "title": "Дождаться 5 главу Deltarune",
-        "status": "todo"
-    }
-]
+[]
